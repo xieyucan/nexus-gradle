@@ -1,0 +1,80 @@
+plugins {
+    id 'java'
+    id 'maven'
+    id 'org.springframework.boot' version '2.4.5'
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+}
+
+group 'com.xh.nexus'
+version '1.0-SNAPSHOT'
+def artifactId = "nexus-gradle"
+sourceCompatibility = '1.8'
+
+// PS: 具有上传权限的账号密码
+def username = "username"
+def password = "password"
+
+apply plugin: 'maven' // 引入maven插件
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    maven {
+        url 'http://nexus-domain/repository/maven-public/'
+        credentials {
+            username = "$username"
+            password = "$password"
+        }
+    }
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    compileOnly 'org.projectlombok:lombok'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+//打包源代码
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+artifacts {
+    archives sourcesJar
+}
+
+//如果希望gradle install，安装到本地仓库，参考下面的内容
+install {
+    repositories.mavenInstaller {
+        pom.groupId = "$project.group"
+        pom.artifactId = "$artifactId"
+        pom.version = "$project.version"
+    }
+}
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            repository(url: "http://nexus-domain/repository/maven-releases/") {
+                authentication(userName: "$username", password: "$password")
+            }
+            snapshotRepository(url: "http://nexus-domain/repository/maven-snapshots/") {
+                authentication(userName: "$username", password: "$password")
+            }
+            pom.groupId = "$project.group"
+            pom.artifactId = "$artifactId"
+            pom.version = "$project.version"
+        }
+    }
+}
